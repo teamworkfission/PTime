@@ -48,7 +48,7 @@ export type Database = {
             foreignKeyName: "applications_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -92,40 +92,10 @@ export type Database = {
             foreignKeyName: "jobs_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          first_name: string | null
-          id: string
-          last_name: string | null
-          role: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          first_name?: string | null
-          id: string
-          last_name?: string | null
-          role: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          role?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       user_profiles: {
         Row: {

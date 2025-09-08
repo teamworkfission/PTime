@@ -14,9 +14,19 @@ const AuthRedirectHandler: React.FC = () => {
   const location = useLocation()
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user && location.pathname === '/') {
+    if (!loading && isAuthenticated && user) {
       // If user is authenticated and on landing page, redirect to their dashboard
-      navigate(getRoleBasedDashboard(user.role), { replace: true })
+      if (location.pathname === '/') {
+        console.log('Redirecting authenticated user to dashboard:', user.role)
+        navigate(getRoleBasedDashboard(user.role), { replace: true })
+      }
+      // Also handle if user is on the wrong dashboard for their role
+      else if (user.role === 'employer' && location.pathname === '/dashboard') {
+        navigate('/employer-dashboard', { replace: true })
+      }
+      else if (user.role === 'worker' && location.pathname === '/employer-dashboard') {
+        navigate('/dashboard', { replace: true })
+      }
     }
   }, [isAuthenticated, user, loading, navigate, location.pathname])
 

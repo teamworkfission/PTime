@@ -4,8 +4,6 @@ export interface User {
   id: string
   email: string
   role: UserRole
-  firstName?: string
-  lastName?: string
   createdAt: string
 }
 
@@ -15,16 +13,6 @@ export interface AuthState {
   isAuthenticated: boolean
 }
 
-export interface SignUpData {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-  role: UserRole
-}
-
-export interface SignInData {
-  email: string
-  password: string
+export interface GoogleAuthData {
   role: UserRole
 }

@@ -22,20 +22,26 @@ export class JobsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async create(@Body() createJobDto: any) {
-    return this.jobsService.create(createJobDto);
+    // Note: employerId should be extracted from JWT token in real implementation
+    const employerId = 'temp-employer-id'; // This should come from JWT payload
+    return this.jobsService.createJob(employerId, createJobDto);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async update(@Param('id') id: string, @Body() updateJobDto: any) {
-    return this.jobsService.update(id, updateJobDto);
+    // Note: employerId should be extracted from JWT token in real implementation
+    const employerId = 'temp-employer-id'; // This should come from JWT payload
+    return this.jobsService.update(id, employerId, updateJobDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async remove(@Param('id') id: string) {
-    return this.jobsService.delete(id);
+    // Note: employerId should be extracted from JWT token in real implementation
+    const employerId = 'temp-employer-id'; // This should come from JWT payload
+    return this.jobsService.delete(id, employerId);
   }
 }

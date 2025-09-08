@@ -6,5 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    strictPort: true, // Exit if port is already in use instead of trying another port
+    host: true,
   },
 })

@@ -1,8 +1,10 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, UseGuards, Get, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LocalAuthGuard } from './guards/local-auth.guard';
+import { RoleGuard } from './guards/role.guard';
+import { SignUpDto, SignInDto, AuthResponseDto, UserProfileDto, UserRole } from './dto/auth.dto';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -10,32 +12,64 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  @ApiOperation({ summary: 'User registration' })
-  async signUp(@Body() signUpDto: any) {
-    // TODO: Implement signup logic with Supabase
-    return { message: 'Signup endpoint - To be implemented' };
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Complete user registration after OAuth' })
+  @ApiResponse({ status: 201, description: 'User profile created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - User must complete OAuth first' })
+  @ApiResponse({ status: 409, description: 'Conflict - User already exists' })
+  async signUp(@Body() signUpDto: SignUpDto) {
+    return this.authService.signUp(signUpDto);
   }
 
-  @UseGuards(LocalAuthGuard)
   @Post('signin')
-  @ApiOperation({ summary: 'User login' })
-  async signIn(@Request() req: any) {
-    // TODO: Implement signin logic
-    return { message: 'Signin endpoint - To be implemented' };
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'User login with role validation' })
+  @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid credentials or wrong role' })
+  async signIn(@Body() signInDto: SignInDto): Promise<AuthResponseDto> {
+    return this.authService.signIn(signInDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  getProfile(@Request() req: any) {
-    return req.user;
+  @ApiResponse({ status: 200, description: 'User profile retrieved', type: UserProfileDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Request() req: any): Promise<UserProfileDto> {
+    return this.authService.getProfile(req.user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('signout')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'User logout' })
-  async signOut() {
-    // TODO: Implement signout logic
-    return { message: 'Signout endpoint - To be implemented' };
+  @ApiResponse({ status: 200, description: 'Logout successful' })
+  async signOut(@Request() req: any) {
+    return this.authService.logout(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @Roles(UserRole.EMPLOYER)
+  @Get('employer-profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get employer profile - Employer only' })
+  @ApiResponse({ status: 200, description: 'Employer profile retrieved', type: UserProfileDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Employer role required' })
+  async getEmployerProfile(@Request() req: any): Promise<UserProfileDto> {
+    return this.authService.getProfile(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @Roles(UserRole.WORKER)
+  @Get('worker-profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get worker profile - Worker only' })
+  @ApiResponse({ status: 200, description: 'Worker profile retrieved', type: UserProfileDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Worker role required' })
+  async getWorkerProfile(@Request() req: any): Promise<UserProfileDto> {
+    return this.authService.getProfile(req.user.sub);
   }
 }
