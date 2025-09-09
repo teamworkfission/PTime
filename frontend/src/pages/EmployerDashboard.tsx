@@ -1,8 +1,111 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { TabNavigation, Tab } from '../components/layout/TabNavigation'
+import { ManageBusinessTab } from '../components/business/ManageBusinessTab'
+import { HiringTab } from '../components/hiring/HiringTab'
+import { Business, CreateBusinessDto } from '../types/business'
+
+// Mock data for demonstration - in real implementation, this would come from API
+const mockBusinesses: Business[] = [
+  {
+    id: '1',
+    employer_id: 'mock-employer-id',
+    business_name: 'Mario\'s Pizza Palace',
+    business_location: '123 Main St, New York, NY 10001',
+    business_type: 'Restaurant',
+    employee_count: 15,
+    google_maps_data: {
+      lat: 40.7589,
+      lng: -73.9851,
+      formatted_address: '123 Main St, New York, NY 10001',
+    },
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z',
+  },
+];
+
+const tabs: Tab[] = [
+  { id: 'manage-business', label: 'Manage Business', icon: '🏪' },
+  { id: 'schedule', label: 'Schedule', icon: '📅' },
+  { id: 'hiring', label: 'Job Posting and Hiring', icon: '💼' },
+];
 
 export const EmployerDashboard: React.FC = () => {
   const { user, signOut } = useAuth()
+  const [activeTab, setActiveTab] = useState('manage-business')
+  const [businesses, setBusinesses] = useState<Business[]>(mockBusinesses)
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(
+    mockBusinesses.length > 0 ? mockBusinesses[0] : null
+  )
+
+  // Mock handlers - in real implementation, these would make API calls
+  const handleCreateBusiness = async (businessData: CreateBusinessDto) => {
+    console.log('Creating business:', businessData)
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    const newBusiness: Business = {
+      id: Date.now().toString(),
+      employer_id: user?.id || 'mock-employer-id',
+      ...businessData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    
+    setBusinesses(prev => [...prev, newBusiness])
+    if (!selectedBusiness) {
+      setSelectedBusiness(newBusiness)
+    }
+  }
+
+  const handleUpdateBusiness = async (businessId: string, businessData: Partial<CreateBusinessDto>) => {
+    console.log('Updating business:', businessId, businessData)
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    setBusinesses(prev => prev.map(business => 
+      business.id === businessId 
+        ? { ...business, ...businessData, updated_at: new Date().toISOString() }
+        : business
+    ))
+  }
+
+  const handleDeleteBusiness = async (businessId: string) => {
+    console.log('Deleting business:', businessId)
+    setBusinesses(prev => prev.filter(business => business.id !== businessId))
+    if (selectedBusiness?.id === businessId) {
+      const remainingBusinesses = businesses.filter(business => business.id !== businessId)
+      setSelectedBusiness(remainingBusinesses.length > 0 ? remainingBusinesses[0] : null)
+    }
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'manage-business':
+        return (
+          <ManageBusinessTab
+            businesses={businesses}
+            onCreateBusiness={handleCreateBusiness}
+            onUpdateBusiness={handleUpdateBusiness}
+            onDeleteBusiness={handleDeleteBusiness}
+          />
+        )
+      case 'schedule':
+        return (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📅</div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Schedule Management</h3>
+            <p className="text-gray-600">
+              Schedule management functionality will be implemented here.
+            </p>
+          </div>
+        )
+      case 'hiring':
+        return <HiringTab selectedBusinessId={selectedBusiness?.id} />
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,106 +135,38 @@ export const EmployerDashboard: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Active Jobs Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Active Job Posts
-            </h2>
-            <div className="text-3xl font-bold text-primary-600 mb-2">5</div>
-            <p className="text-gray-600 text-sm">Currently hiring</p>
-            <button className="mt-4 w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 transition-colors">
-              Manage Jobs
-            </button>
-          </div>
-
-          {/* Applications Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              New Applications
-            </h2>
-            <div className="text-3xl font-bold text-orange-600 mb-2">18</div>
-            <p className="text-gray-600 text-sm">Awaiting review</p>
-            <button className="mt-4 w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition-colors">
-              Review Applications
-            </button>
-          </div>
-
-          {/* Hired Workers Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Hired This Month
-            </h2>
-            <div className="text-3xl font-bold text-green-600 mb-2">12</div>
-            <p className="text-gray-600 text-sm">Workers hired</p>
-            <button className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors">
-              View Workers
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">
-              <div className="text-2xl mb-2">📝</div>
-              <div className="font-medium text-gray-900">Post New Job</div>
-              <div className="text-sm text-gray-600">Create a new job listing</div>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">
-              <div className="text-2xl mb-2">👥</div>
-              <div className="font-medium text-gray-900">Browse Workers</div>
-              <div className="text-sm text-gray-600">Find qualified candidates</div>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">
-              <div className="text-2xl mb-2">📊</div>
-              <div className="font-medium text-gray-900">View Analytics</div>
-              <div className="text-sm text-gray-600">Track hiring metrics</div>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">
-              <div className="text-2xl mb-2">💳</div>
-              <div className="font-medium text-gray-900">Billing</div>
-              <div className="text-sm text-gray-600">Manage payments</div>
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Jobs */}
-        <div className="mt-8 bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Job Posts</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+        {/* Selected Business Info */}
+        {selectedBusiness && (
+          <div className="mb-6 bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">🏪</div>
                 <div>
-                  <p className="font-medium text-gray-900">Weekend Server Position</p>
-                  <p className="text-sm text-gray-600">5 applications • Posted 2 days ago</p>
+                  <h2 className="font-semibold text-gray-900">{selectedBusiness.business_name}</h2>
+                  <p className="text-sm text-gray-600">{selectedBusiness.business_location}</p>
                 </div>
-                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                  Active
-                </span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <div>
-                  <p className="font-medium text-gray-900">Event Setup Assistant</p>
-                  <p className="text-sm text-gray-600">12 applications • Posted 1 week ago</p>
-                </div>
-                <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                  In Progress
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Warehouse Helper</p>
-                  <p className="text-sm text-gray-600">Position filled • Posted 2 weeks ago</p>
-                </div>
-                <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                  Completed
-                </span>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{selectedBusiness.business_type}</p>
+                <p className="text-sm text-gray-600">{selectedBusiness.employee_count} employees</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 pt-6">
+            <TabNavigation
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+          </div>
+          
+          {/* Tab Content */}
+          <div className="p-6">
+            {renderTabContent()}
           </div>
         </div>
       </main>
