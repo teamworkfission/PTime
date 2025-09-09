@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { TabNavigation, Tab } from '../components/layout/TabNavigation'
+import { DashboardCard } from '../components/layout/DashboardCard'
+import { ResponsiveContainer, ResponsiveGrid } from '../components/layout/ResponsiveContainer'
 import { ManageBusinessTab } from '../components/business/ManageBusinessTab'
 import { HiringTab } from '../components/hiring/HiringTab'
 import { Business, CreateBusinessDto } from '../types/business'
@@ -24,15 +25,9 @@ const mockBusinesses: Business[] = [
   },
 ];
 
-const tabs: Tab[] = [
-  { id: 'manage-business', label: 'Manage Business', icon: '🏪' },
-  { id: 'schedule', label: 'Schedule', icon: '📅' },
-  { id: 'hiring', label: 'Job Posting and Hiring', icon: '💼' },
-];
-
 export const EmployerDashboard: React.FC = () => {
   const { user, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState('manage-business')
+  const [activeSection, setActiveSection] = useState<'overview' | 'manage-business' | 'schedule' | 'hiring'>('overview')
   const [businesses, setBusinesses] = useState<Business[]>(mockBusinesses)
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(
     mockBusinesses.length > 0 ? mockBusinesses[0] : null
@@ -79,8 +74,10 @@ export const EmployerDashboard: React.FC = () => {
     }
   }
 
-  const renderTabContent = () => {
-    switch (activeTab) {
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case 'overview':
+        return renderOverviewSection()
       case 'manage-business':
         return (
           <ManageBusinessTab
@@ -107,68 +104,204 @@ export const EmployerDashboard: React.FC = () => {
     }
   }
 
+  const renderOverviewSection = () => (
+    <div className="space-y-6 sm:space-y-8">
+      {/* Welcome Section */}
+      <div className="text-center py-6 sm:py-8">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+          Welcome to your Dashboard
+        </h2>
+        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+          Manage your businesses, schedule employees, and handle hiring all in one place.
+        </p>
+      </div>
+
+      {/* Main Dashboard Cards */}
+      <ResponsiveGrid className="lg:grid-cols-3">
+        <DashboardCard
+          icon="🏪"
+          title="Manage Business"
+          description="Register and manage your business locations for operations"
+          onClick={() => setActiveSection('manage-business')}
+          isActive={activeSection === 'manage-business'}
+          stats={{
+            primary: { value: businesses.length, label: 'Businesses' },
+            secondary: businesses.length > 0 ? { 
+              value: businesses.reduce((sum, b) => sum + b.employee_count, 0), 
+              label: 'Total Employees' 
+            } : undefined
+          }}
+          badge={businesses.length === 0 ? { text: 'Setup Required', color: 'orange' } : undefined}
+        />
+
+        <DashboardCard
+          icon="📅"
+          title="Schedule"
+          description="Manage employee schedules and shift assignments"
+          onClick={() => setActiveSection('schedule')}
+          isActive={activeSection === 'schedule'}
+          stats={{
+            primary: { value: '0', label: 'Active Schedules' },
+            secondary: { value: '0', label: 'This Week' }
+          }}
+          badge={{ text: 'Coming Soon', color: 'blue' }}
+        />
+
+        <DashboardCard
+          icon="💼"
+          title="Job Posting and Hiring"
+          description="Post jobs, review applications, and hire qualified workers"
+          onClick={() => setActiveSection('hiring')}
+          isActive={activeSection === 'hiring'}
+          stats={{
+            primary: { value: '5', label: 'Active Jobs' },
+            secondary: { value: '18', label: 'Applications' }
+          }}
+          badge={{ text: 'Active', color: 'green' }}
+        />
+      </ResponsiveGrid>
+
+      {/* Quick Stats Section */}
+      {businesses.length > 0 && (
+        <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-6 sm:p-8">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
+            Quick Overview
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            <div className="text-center">
+              <div className="text-2xl sm:text-3xl font-bold text-primary-600 mb-1">
+                {businesses.length}
+              </div>
+              <div className="text-sm text-gray-600">Business{businesses.length !== 1 ? 'es' : ''}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">5</div>
+              <div className="text-sm text-gray-600">Active Jobs</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">18</div>
+              <div className="text-sm text-gray-600">Applications</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">12</div>
+              <div className="text-sm text-gray-600">Hired This Month</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+        </div>
+        <div className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">New application received</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Weekend Server Position • 2 hours ago</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-sm">📝</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Job post published</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Event Setup Assistant • 1 day ago</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-purple-600 text-sm">👥</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Worker hired</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Warehouse Helper position • 3 days ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <ResponsiveContainer>
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center space-x-3">
+              {activeSection !== 'overview' && (
+                <button
+                  onClick={() => setActiveSection('overview')}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors lg:hidden"
+                  aria-label="Back to overview"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                 PTime - Employer Dashboard
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm text-gray-600 hidden sm:block">
                 Welcome, {user?.firstName || user?.email}
               </span>
               <button
                 onClick={signOut}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 transition-colors px-2 py-1 rounded"
               >
                 Sign Out
               </button>
             </div>
           </div>
-        </div>
+        </ResponsiveContainer>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Selected Business Info */}
-        {selectedBusiness && (
-          <div className="mb-6 bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl">🏪</div>
-                <div>
-                  <h2 className="font-semibold text-gray-900">{selectedBusiness.business_name}</h2>
-                  <p className="text-sm text-gray-600">{selectedBusiness.business_location}</p>
+      <main className="pb-6 sm:pb-8">
+        <ResponsiveContainer className="pt-6 sm:pt-8">
+          {/* Selected Business Info - Only show on non-overview sections */}
+          {selectedBusiness && activeSection !== 'overview' && (
+            <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl flex-shrink-0">🏪</div>
+                  <div className="min-w-0">
+                    <h2 className="font-semibold text-gray-900 truncate">{selectedBusiness.business_name}</h2>
+                    <p className="text-sm text-gray-600 truncate">{selectedBusiness.business_location}</p>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right">
+                  <p className="text-sm font-medium text-gray-900">{selectedBusiness.business_type}</p>
+                  <p className="text-sm text-gray-600">{selectedBusiness.employee_count} employees</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{selectedBusiness.business_type}</p>
-                <p className="text-sm text-gray-600">{selectedBusiness.employee_count} employees</p>
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 pt-6">
-            <TabNavigation
-              tabs={tabs}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+          {/* Section Content */}
+          <div className={`
+            ${activeSection === 'overview' ? '' : 'bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8'}
+          `}>
+            {renderSectionContent()}
           </div>
-          
-          {/* Tab Content */}
-          <div className="p-6">
-            {renderTabContent()}
-          </div>
-        </div>
+        </ResponsiveContainer>
       </main>
     </div>
   )
