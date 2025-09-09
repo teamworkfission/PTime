@@ -20,4 +20,6 @@ export const TABLES = {
   USER_PROFILES: 'user_profiles',
   JOBS: 'jobs',
   APPLICATIONS: 'applications',
+  BUSINESSES: 'businesses',
+  EMPLOYERS: 'employers',
 } as const;

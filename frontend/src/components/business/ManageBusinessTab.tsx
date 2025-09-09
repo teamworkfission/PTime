@@ -137,10 +137,15 @@ export const ManageBusinessTab: React.FC<ManageBusinessTabProps> = ({
             onSubmit={editingBusiness ? handleUpdateBusiness : handleCreateBusiness}
             isLoading={isLoading}
             initialData={editingBusiness ? {
-              business_name: editingBusiness.business_name,
-              business_location: editingBusiness.business_location,
-              business_type: editingBusiness.business_type,
-              employee_count: editingBusiness.employee_count,
+              name: editingBusiness.name,
+              type: editingBusiness.type,
+              email: editingBusiness.email,
+              phone: editingBusiness.phone,
+              address_street: editingBusiness.address_street,
+              address_city: editingBusiness.address_city,
+              address_county: editingBusiness.address_county,
+              address_state: editingBusiness.address_state,
+              address_zipcode: editingBusiness.address_zipcode,
               google_maps_data: editingBusiness.google_maps_data,
             } : undefined}
           />

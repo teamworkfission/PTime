@@ -1,76 +1,88 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { DashboardCard } from '../components/layout/DashboardCard'
 import { ResponsiveContainer, ResponsiveGrid } from '../components/layout/ResponsiveContainer'
 import { ManageBusinessTab } from '../components/business/ManageBusinessTab'
 import { HiringTab } from '../components/hiring/HiringTab'
 import { Business, CreateBusinessDto } from '../types/business'
-
-// Mock data for demonstration - in real implementation, this would come from API
-const mockBusinesses: Business[] = [
-  {
-    id: '1',
-    employer_id: 'mock-employer-id',
-    business_name: 'Mario\'s Pizza Palace',
-    business_location: '123 Main St, New York, NY 10001',
-    business_type: 'Restaurant',
-    employee_count: 15,
-    google_maps_data: {
-      lat: 40.7589,
-      lng: -73.9851,
-      formatted_address: '123 Main St, New York, NY 10001',
-    },
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-  },
-];
+import { businessService } from '../services/business.service'
 
 export const EmployerDashboard: React.FC = () => {
   const { user, signOut } = useAuth()
   const [activeSection, setActiveSection] = useState<'overview' | 'manage-business' | 'schedule' | 'hiring'>('overview')
-  const [businesses, setBusinesses] = useState<Business[]>(mockBusinesses)
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(
-    mockBusinesses.length > 0 ? mockBusinesses[0] : null
-  )
+  const [businesses, setBusinesses] = useState<Business[]>([])
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
+  const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(true)
+  const [businessError, setBusinessError] = useState<string | null>(null)
 
-  // Mock handlers - in real implementation, these would make API calls
-  const handleCreateBusiness = async (businessData: CreateBusinessDto) => {
-    console.log('Creating business:', businessData)
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const newBusiness: Business = {
-      id: Date.now().toString(),
-      employer_id: user?.id || 'mock-employer-id',
-      ...businessData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+  // Load businesses on component mount and when user changes
+  useEffect(() => {
+    if (user?.role === 'employer') {
+      loadBusinesses()
     }
-    
-    setBusinesses(prev => [...prev, newBusiness])
-    if (!selectedBusiness) {
-      setSelectedBusiness(newBusiness)
+  }, [user])
+
+  const loadBusinesses = async () => {
+    try {
+      setIsLoadingBusinesses(true)
+      setBusinessError(null)
+      const businessData = await businessService.fetchBusinesses()
+      setBusinesses(businessData)
+      
+      // Set first business as selected if none selected
+      if (!selectedBusiness && businessData.length > 0) {
+        setSelectedBusiness(businessData[0])
+      }
+    } catch (error) {
+      console.error('Error loading businesses:', error)
+      setBusinessError(error instanceof Error ? error.message : 'Failed to load businesses')
+    } finally {
+      setIsLoadingBusinesses(false)
+    }
+  }
+
+  const handleCreateBusiness = async (businessData: CreateBusinessDto) => {
+    try {
+      const newBusiness = await businessService.createBusiness(businessData)
+      setBusinesses(prev => [...prev, newBusiness])
+      
+      if (!selectedBusiness) {
+        setSelectedBusiness(newBusiness)
+      }
+    } catch (error) {
+      console.error('Error creating business:', error)
+      throw error // Re-throw so the form can handle the error
     }
   }
 
   const handleUpdateBusiness = async (businessId: string, businessData: Partial<CreateBusinessDto>) => {
-    console.log('Updating business:', businessId, businessData)
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setBusinesses(prev => prev.map(business => 
-      business.id === businessId 
-        ? { ...business, ...businessData, updated_at: new Date().toISOString() }
-        : business
-    ))
+    try {
+      const updatedBusiness = await businessService.updateBusiness(businessId, businessData)
+      setBusinesses(prev => prev.map(business => 
+        business.id === businessId ? updatedBusiness : business
+      ))
+      
+      if (selectedBusiness?.id === businessId) {
+        setSelectedBusiness(updatedBusiness)
+      }
+    } catch (error) {
+      console.error('Error updating business:', error)
+      throw error // Re-throw so the form can handle the error
+    }
   }
 
   const handleDeleteBusiness = async (businessId: string) => {
-    console.log('Deleting business:', businessId)
-    setBusinesses(prev => prev.filter(business => business.id !== businessId))
-    if (selectedBusiness?.id === businessId) {
-      const remainingBusinesses = businesses.filter(business => business.id !== businessId)
-      setSelectedBusiness(remainingBusinesses.length > 0 ? remainingBusinesses[0] : null)
+    try {
+      await businessService.deleteBusiness(businessId)
+      setBusinesses(prev => prev.filter(business => business.id !== businessId))
+      
+      if (selectedBusiness?.id === businessId) {
+        const remainingBusinesses = businesses.filter(business => business.id !== businessId)
+        setSelectedBusiness(remainingBusinesses.length > 0 ? remainingBusinesses[0] : null)
+      }
+    } catch (error) {
+      console.error('Error deleting business:', error)
+      throw error // Re-throw so the component can handle the error
     }
   }
 
@@ -79,6 +91,31 @@ export const EmployerDashboard: React.FC = () => {
       case 'overview':
         return renderOverviewSection()
       case 'manage-business':
+        if (isLoadingBusinesses) {
+          return (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading businesses...</p>
+            </div>
+          )
+        }
+
+        if (businessError) {
+          return (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Businesses</h3>
+              <p className="text-red-600 mb-4">{businessError}</p>
+              <button
+                onClick={loadBusinesses}
+                className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"
+              >
+                Retry
+              </button>
+            </div>
+          )
+        }
+
         return (
           <ManageBusinessTab
             businesses={businesses}
@@ -104,17 +141,64 @@ export const EmployerDashboard: React.FC = () => {
     }
   }
 
-  const renderOverviewSection = () => (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Welcome Section */}
-      <div className="text-center py-6 sm:py-8">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-          Welcome to your Dashboard
-        </h2>
-        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-          Manage your businesses, schedule employees, and handle hiring all in one place.
-        </p>
-      </div>
+  const renderOverviewSection = () => {
+    // Show loading state for overview while businesses are loading
+    if (isLoadingBusinesses) {
+      return (
+        <div className="space-y-6 sm:space-y-8">
+          {/* Welcome Section */}
+          <div className="text-center py-6 sm:py-8">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+              Welcome to your Dashboard
+            </h2>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+              Manage your businesses, schedule employees, and handle hiring all in one place.
+            </p>
+          </div>
+
+          {/* Loading State */}
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your dashboard...</p>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-6 sm:space-y-8">
+        {/* Welcome Section */}
+        <div className="text-center py-6 sm:py-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+            Welcome to your Dashboard
+          </h2>
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+            Manage your businesses, schedule employees, and handle hiring all in one place.
+          </p>
+        </div>
+
+        {/* Error State */}
+        {businessError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-red-800">Error loading businesses</p>
+                <p className="text-sm text-red-600">{businessError}</p>
+              </div>
+              <button
+                onClick={loadBusinesses}
+                className="ml-auto text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
 
       {/* Main Dashboard Cards */}
       <ResponsiveGrid className="lg:grid-cols-3">
@@ -235,6 +319,7 @@ export const EmployerDashboard: React.FC = () => {
       </div>
     </div>
   )
+}
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -283,13 +368,13 @@ export const EmployerDashboard: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <div className="text-2xl flex-shrink-0">🏪</div>
                   <div className="min-w-0">
-                    <h2 className="font-semibold text-gray-900 truncate">{selectedBusiness.business_name}</h2>
-                    <p className="text-sm text-gray-600 truncate">{selectedBusiness.business_location}</p>
+                    <h2 className="font-semibold text-gray-900 truncate">{selectedBusiness.name}</h2>
+                    <p className="text-sm text-gray-600 truncate">{selectedBusiness.address_street}, {selectedBusiness.address_city}</p>
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="text-sm font-medium text-gray-900">{selectedBusiness.business_type}</p>
-                  <p className="text-sm text-gray-600">{selectedBusiness.employee_count} employees</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedBusiness.type}</p>
+                  <p className="text-sm text-gray-600">{selectedBusiness.is_active ? 'Active' : 'Inactive'}</p>
                 </div>
               </div>
             </div>

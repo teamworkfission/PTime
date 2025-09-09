@@ -1,25 +1,40 @@
 export interface Business {
   id: string;
   employer_id: string;
-  business_name: string;
-  business_location: string;
-  business_type: string;
-  employee_count: number;
+  name: string;
+  type: string;
+  email?: string;
+  phone?: string;
+  // Structured address fields
+  address_street: string;
+  address_city: string;
+  address_county: string;
+  address_state: string;
+  address_zipcode: string;
+  // Optional Google Maps data for precise location
   google_maps_data?: {
     lat: number;
     lng: number;
     place_id?: string;
     formatted_address?: string;
   };
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateBusinessDto {
-  business_name: string;
-  business_location: string;
-  business_type: string;
-  employee_count: number;
+  name: string;
+  type: string;
+  email?: string;
+  phone?: string;
+  // Structured address fields (all required)
+  address_street: string;
+  address_city: string;
+  address_county: string;
+  address_state: string;
+  address_zipcode: string;
+  // Optional Google Maps data for precise location
   google_maps_data?: {
     lat: number;
     lng: number;
@@ -29,10 +44,17 @@ export interface CreateBusinessDto {
 }
 
 export interface UpdateBusinessDto {
-  business_name?: string;
-  business_location?: string;
-  business_type?: string;
-  employee_count?: number;
+  name?: string;
+  type?: string;
+  email?: string;
+  phone?: string;
+  // Structured address fields
+  address_street?: string;
+  address_city?: string;
+  address_county?: string;
+  address_state?: string;
+  address_zipcode?: string;
+  // Optional Google Maps data for precise location
   google_maps_data?: {
     lat: number;
     lng: number;
