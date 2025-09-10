@@ -29,7 +29,11 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [me, setMe] = useState<User | null>(null)
   const [status, setStatus] = useState<AuthStatus>('initializing')
-  const [pendingAuthData, setPendingAuthData] = useState<GoogleAuthData | null>(null)
+  const [pendingAuthData, setPendingAuthData] = useState<GoogleAuthData | null>(() => {
+    // Initialize from localStorage to persist across OAuth redirects
+    const stored = localStorage.getItem('supabase_pending_auth_data')
+    return stored ? JSON.parse(stored) : null
+  })
 
   useEffect(() => {
     // Get initial session
@@ -39,6 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (pendingAuthData) {
           handleAuthCompletion(session.user, pendingAuthData)
           setPendingAuthData(null)
+          localStorage.removeItem('supabase_pending_auth_data')
         } else {
           // No pending data - just fetch profile for existing authenticated users
           fetchUserProfile(session.user.id)
@@ -56,6 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (pendingAuthData) {
             await handleAuthCompletion(session.user, pendingAuthData)
             setPendingAuthData(null)
+            localStorage.removeItem('supabase_pending_auth_data')
           } else {
             // Direct login without pending data
             await fetchUserProfile(session.user.id)
@@ -131,6 +137,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             if (employeeError) {
               console.error('Error creating employee record:', employeeError)
+              // Don't fail the entire signup, but log the error
+              // The user can still function with just the user_profiles record
+            }
+          }
+
+          // For employers, also create entry in employers table
+          if (authData.role === 'employer') {
+            const { error: employerError } = await supabase
+              .from('employers')
+              .insert([{
+                user_id: authUser.id,
+                display_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Employer',
+                email: authUser.email!,
+              }])
+
+            if (employerError) {
+              console.error('Error creating employer record:', employerError)
               // Don't fail the entire signup, but log the error
               // The user can still function with just the user_profiles record
             }
@@ -213,7 +236,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUpWithGoogle = async (googleAuthData: GoogleAuthData) => {
     try {
-      setPendingAuthData({ ...googleAuthData, mode: 'signup' })
+      const authData = { ...googleAuthData, mode: 'signup' as const }
+      setPendingAuthData(authData)
+      localStorage.setItem('supabase_pending_auth_data', JSON.stringify(authData))
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -227,19 +252,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         setPendingAuthData(null)
+        localStorage.removeItem('supabase_pending_auth_data')
         return { error }
       }
 
       return { error: null }
     } catch (error) {
       setPendingAuthData(null)
+      localStorage.removeItem('supabase_pending_auth_data')
       return { error: error as Error }
     }
   }
 
   const signInWithGoogle = async (googleAuthData: GoogleAuthData) => {
     try {
-      setPendingAuthData({ ...googleAuthData, mode: 'signin' })
+      const authData = { ...googleAuthData, mode: 'signin' as const }
+      setPendingAuthData(authData)
+      localStorage.setItem('supabase_pending_auth_data', JSON.stringify(authData))
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -253,23 +282,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         setPendingAuthData(null)
+        localStorage.removeItem('supabase_pending_auth_data')
         return { error }
       }
 
       return { error: null }
     } catch (error) {
       setPendingAuthData(null)
+      localStorage.removeItem('supabase_pending_auth_data')
       return { error: error as Error }
     }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
+    // Clear any pending auth data first
+    setPendingAuthData(null)
+    
+    // Sign out from Supabase - use 'global' scope to clear all sessions
+    const { error } = await supabase.auth.signOut({ scope: 'global' })
     if (error) {
       console.error('Error signing out:', error)
     }
+    
+    // Clear local state
     setMe(null)
     setStatus('unauthenticated')
+    
+    // Clear any cached data in localStorage
+    localStorage.removeItem('oauth_provider_token')
+    localStorage.removeItem('oauth_provider_refresh_token')
+    localStorage.removeItem('supabase_pending_auth_data')
   }
 
   const value: AuthContextType = {

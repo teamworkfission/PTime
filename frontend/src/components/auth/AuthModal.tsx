@@ -121,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 {/* Error Display in Footer */}
                 {error && (
                   <div className="mt-4">
-                    <AuthError error={error} />
+                    <AuthError error={error} role={role} />
                   </div>
                 )}
               </div>

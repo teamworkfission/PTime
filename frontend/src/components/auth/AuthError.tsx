@@ -1,19 +1,23 @@
 import React from 'react'
+import { UserRole } from '../../types/auth'
 
 interface AuthErrorProps {
   error: string | null
+  role?: UserRole
 }
 
-export const AuthError: React.FC<AuthErrorProps> = ({ error }) => {
+export const AuthError: React.FC<AuthErrorProps> = ({ error, role = 'employee' }) => {
   if (!error) return null
 
   // Map technical errors to user-friendly messages
   const getErrorMessage = (error: string) => {
+    const roleText = role === 'employee' ? 'Employee' : 'Employer'
+    
     if (error === 'already_registered' || error.includes('already exists')) {
-      return 'Employee already exists, please sign in.'
+      return `${roleText} already exists, please sign in.`
     }
     if (error === 'no_account' || error.includes('not found')) {
-      return 'No employee found, please sign up.'
+      return `No ${roleText.toLowerCase()} found, please sign up.`
     }
     if (error === 'role_mismatch') {
       return 'This account is registered with a different role. Please contact support if you need to switch roles.'
