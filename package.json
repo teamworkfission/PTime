@@ -1,7 +1,7 @@
 {
   "name": "ptime-monorepo",
   "version": "1.0.0",
-  "description": "PTime - Gig Worker Platform (Frontend & Backend)",
+  "description": "PTime - Employee Gig Platform (Frontend & Backend)",
   "private": true,
   "workspaces": [
     "frontend",

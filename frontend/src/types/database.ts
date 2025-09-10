@@ -20,21 +20,21 @@ export type Database = {
           id: string
           job_id: string
           status: string | null
-          worker_id: string
+          employee_id: string
         }
         Insert: {
           applied_at?: string
           id?: string
           job_id: string
           status?: string | null
-          worker_id: string
+          employee_id: string
         }
         Update: {
           applied_at?: string
           id?: string
           job_id?: string
           status?: string | null
-          worker_id?: string
+          employee_id?: string
         }
         Relationships: [
           {
@@ -45,8 +45,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "applications_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "applications_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
             referencedColumns: ["id"]

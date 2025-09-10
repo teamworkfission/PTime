@@ -8,7 +8,7 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
   });
 
@@ -25,7 +25,7 @@ async function bootstrap() {
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('PTime API')
-    .setDescription('Gig Worker Platform API')
+    .setDescription('Employee Gig Platform API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

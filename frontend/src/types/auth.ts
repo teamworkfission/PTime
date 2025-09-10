@@ -1,4 +1,4 @@
-export type UserRole = 'worker' | 'employer'
+export type UserRole = 'employee' | 'employer'
 
 export interface User {
   id: string
@@ -7,12 +7,7 @@ export interface User {
   createdAt: string
 }
 
-export interface AuthState {
-  user: User | null
-  loading: boolean
-  isAuthenticated: boolean
-}
-
 export interface GoogleAuthData {
   role: UserRole
+  mode?: 'signin' | 'signup'
 }

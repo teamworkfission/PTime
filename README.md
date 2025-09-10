@@ -1,6 +1,6 @@
-# PTime - Gig Worker Platform
+# PTime - Employee Gig Platform
 
-A modern **monorepo** gig worker platform that connects part-time workers with local businesses. Built with React, TypeScript, NestJS, and Supabase.
+A modern **monorepo** employee gig platform that connects part-time employees with local businesses. Built with React, TypeScript, NestJS, and Supabase.
 
 ## 🏗️ **Monorepo Structure**
 
@@ -90,7 +90,7 @@ VITE_API_URL=http://localhost:3001/api/v1
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-key
 JWT_SECRET=your-super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 ```
 
 ### **4. Database Setup**
@@ -104,12 +104,12 @@ FRONTEND_URL=http://localhost:3000
 npm run dev
 
 # Or start individually:
-npm run dev:frontend  # Frontend: http://localhost:3000
+npm run dev:frontend  # Frontend: http://localhost:5173
 npm run dev:backend   # Backend: http://localhost:3001
 ```
 
 **Access Points:**
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3001/api/v1
 - **API Docs**: http://localhost:3001/api/docs
 
@@ -176,9 +176,9 @@ npm run lint:backend     # Lint backend code
 
 ## 🎯 **User Flows**
 
-### **For Gig Workers**
+### **For Gig Employees**
 1. Visit landing page → Click **"Get Started"**
-2. Sign up/sign in as worker
+2. Sign up/sign in as employee
 3. Redirected to user dashboard
 4. Browse jobs, apply, track earnings
 
@@ -186,7 +186,7 @@ npm run lint:backend     # Lint backend code
 1. Visit landing page → Click **"Employer / Business Owner"**
 2. Sign up/sign in as employer
 3. Redirected to employer dashboard
-4. Post jobs, review applications, manage workers
+4. Post jobs, review applications, manage employees
 
 ## 🔒 **Security Features**
 

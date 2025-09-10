@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 export const UserDashboard: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { me, signOut } = useAuth()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -12,12 +12,12 @@ export const UserDashboard: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
-                PTime - Worker Dashboard
+                PTime - Employee Dashboard
               </h1>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                Welcome, {user?.firstName || user?.email}
+                Welcome, {me?.email}
               </span>
               <button
                 onClick={signOut}

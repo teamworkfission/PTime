@@ -1,7 +1,7 @@
 {
   "name": "ptime-backend",
   "version": "0.0.1",
-  "description": "PTime Gig Worker Platform - Backend API",
+  "description": "PTime Employee Gig Platform - Backend API",
   "author": "PTime Team",
   "private": true,
   "license": "MIT",

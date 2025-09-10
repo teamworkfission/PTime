@@ -200,7 +200,7 @@ export const ManageBusinessTab: React.FC<ManageBusinessTabProps> = ({
             </div>
             <div>
               <p className="text-sm font-medium text-blue-800">
-                Selected: {selectedBusiness.business_name}
+                Selected: {selectedBusiness.name}
               </p>
               <p className="text-sm text-blue-600">
                 This business will be used as the context for scheduling and job posting operations.

@@ -5,32 +5,34 @@ import { ProtectedRoute } from './components/routing/ProtectedRoute'
 import { LandingPage } from './pages/LandingPage'
 import { UserDashboard } from './pages/UserDashboard'
 import { EmployerDashboard } from './pages/EmployerDashboard'
-import { getRoleBasedDashboard } from './utils/roleBasedRedirect'
+import { AuthSignUp } from './pages/AuthSignUp'
+import { AuthSignIn } from './pages/AuthSignIn'
 
 // Component to handle authentication redirects
 const AuthRedirectHandler: React.FC = () => {
-  const { isAuthenticated, user, loading } = useAuth()
+  const { status, me } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
-      // If user is authenticated and on landing page, redirect to their dashboard
-      if (location.pathname === '/') {
-        console.log('Redirecting authenticated user to dashboard:', user.role)
-        navigate(getRoleBasedDashboard(user.role), { replace: true })
+    if (status === 'authenticated' && me) {
+      // Handle OAuth return redirects and wrong dashboard redirects
+      if (location.pathname === '/' && location.search === '') {
+        // This is likely an OAuth return redirect - send user to their dashboard
+        const dashboardPath = me.role === 'employee' ? '/dashboard' : '/employer-dashboard'
+        navigate(dashboardPath, { replace: true })
       }
-      // Also handle if user is on the wrong dashboard for their role
-      else if (user.role === 'employer' && location.pathname === '/dashboard') {
+      else if (me.role === 'employer' && location.pathname === '/dashboard') {
         navigate('/employer-dashboard', { replace: true })
       }
-      else if (user.role === 'worker' && location.pathname === '/employer-dashboard') {
+      else if (me.role === 'employee' && location.pathname === '/employer-dashboard') {
         navigate('/dashboard', { replace: true })
       }
     }
-  }, [isAuthenticated, user, loading, navigate, location.pathname])
+  }, [status, me, navigate, location.pathname, location.search])
 
-  if (loading) {
+  // Show loading screen while auth status is initializing
+  if (status === 'initializing') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -45,16 +47,27 @@ const AuthRedirectHandler: React.FC = () => {
 }
 
 const AppRoutes: React.FC = () => {
+  const { status } = useAuth()
+
+  // Don't render routes until auth status is determined (prevent flicker)
+  if (status === 'initializing') {
+    return null
+  }
+
   return (
     <Routes>
       {/* Landing Page */}
       <Route path="/" element={<LandingPage />} />
       
-      {/* Worker Dashboard */}
+      {/* Auth Pages */}
+      <Route path="/auth/signup" element={<AuthSignUp />} />
+      <Route path="/auth/signin" element={<AuthSignIn />} />
+      
+      {/* Employee Dashboard */}
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute requiredRole="worker">
+          <ProtectedRoute requiredRole="employee">
             <UserDashboard />
           </ProtectedRoute>
         }

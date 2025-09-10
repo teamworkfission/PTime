@@ -1,8 +1,7 @@
-import { Injectable, BadRequestException, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { createSupabaseClient } from '../config/supabase.config';
 import { UsersService, UserProfile } from '../users/users.service';
-import { SignUpDto, SignInDto, UserRole } from './dto/auth.dto';
+import { UserRole } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -10,7 +9,6 @@ export class AuthService {
   private supabase = createSupabaseClient();
 
   constructor(
-    private jwtService: JwtService,
     private usersService: UsersService,
   ) {}
 
@@ -43,69 +41,6 @@ export class AuthService {
     }
   }
 
-  async signUp(signUpDto: SignUpDto): Promise<{ message: string }> {
-    try {
-      // Check if user already exists in our database
-      const existingUser = await this.usersService.findByEmail(signUpDto.email);
-      if (existingUser) {
-        throw new ConflictException('User already exists. Please use sign in instead.');
-      }
-
-      // Check if user exists in Supabase Auth
-      const { data: authUsers, error: authError } = await this.supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        this.logger.error('Error checking auth users:', authError);
-        throw new BadRequestException('Authentication service error');
-      }
-
-      const existingAuthUser = authUsers.users.find((user: any) => user.email === signUpDto.email);
-      
-      if (!existingAuthUser) {
-        throw new BadRequestException('User must complete OAuth signup first');
-      }
-
-      // Create user profile in our database
-      await this.usersService.create({
-        id: existingAuthUser.id,
-        email: signUpDto.email,
-        user_type: signUpDto.role,
-      });
-
-      return { message: 'User profile created successfully' };
-    } catch (error) {
-      this.logger.error('Error in signup:', error);
-      throw error;
-    }
-  }
-
-  async signIn(signInDto: SignInDto): Promise<{ access_token: string; user: UserProfile }> {
-    try {
-      // Validate user exists and has correct role
-      const user = await this.validateUser(signInDto.email, signInDto.role);
-      
-      if (!user) {
-        throw new UnauthorizedException('Invalid credentials or user does not exist');
-      }
-
-      // Generate JWT token
-      const payload = { 
-        email: user.email, 
-        sub: user.id, 
-        role: user.user_type 
-      };
-
-      const access_token = this.jwtService.sign(payload);
-
-      return {
-        access_token,
-        user,
-      };
-    } catch (error) {
-      this.logger.error('Error in signin:', error);
-      throw error;
-    }
-  }
 
   async verifyGoogleAuth(token: string): Promise<UserProfile | null> {
     try {
@@ -126,17 +61,6 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string): Promise<{ message: string }> {
-    try {
-      // For Supabase, logout is mainly handled on the client side
-      // We could implement token blacklisting here if needed
-      this.logger.log(`User ${userId} logged out`);
-      return { message: 'Logged out successfully' };
-    } catch (error) {
-      this.logger.error('Error in logout:', error);
-      throw error;
-    }
-  }
 
   async getProfile(userId: string): Promise<UserProfile> {
     try {

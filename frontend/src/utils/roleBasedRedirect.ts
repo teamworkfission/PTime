@@ -2,7 +2,7 @@ import { UserRole } from '../types/auth'
 
 export const getRoleBasedDashboard = (role: UserRole): string => {
   switch (role) {
-    case 'worker':
+    case 'employee':
       return '/dashboard'
     case 'employer':
       return '/employer-dashboard'

@@ -6,18 +6,17 @@ import { UserRole } from '../../types/auth'
 interface ProtectedRouteProps {
   children: React.ReactNode
   requiredRole?: UserRole
-  redirectTo?: string
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
-  redirectTo = '/',
 }) => {
-  const { isAuthenticated, user, loading } = useAuth()
+  const { status, me } = useAuth()
   const location = useLocation()
 
-  if (loading) {
+  // This should not happen since AppRoutes gates on initializing, but just in case
+  if (status === 'initializing') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
@@ -25,14 +24,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
-  if (!isAuthenticated) {
+  if (status === 'unauthenticated') {
     // Redirect to home with the current location as state for post-auth redirect
     return <Navigate to="/" state={{ from: location }} replace />
   }
 
   // If a specific role is required and user doesn't have it, redirect to appropriate dashboard
-  if (requiredRole && user?.role !== requiredRole) {
-    const dashboardPath = user?.role === 'worker' ? '/dashboard' : '/employer-dashboard'
+  if (requiredRole && me?.role !== requiredRole) {
+    const dashboardPath = me?.role === 'employee' ? '/dashboard' : '/employer-dashboard'
     return <Navigate to={dashboardPath} replace />
   }
 

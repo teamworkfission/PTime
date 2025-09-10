@@ -8,19 +8,19 @@ import { Business, CreateBusinessDto } from '../types/business'
 import { businessService } from '../services/business.service'
 
 export const EmployerDashboard: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { me, signOut } = useAuth()
   const [activeSection, setActiveSection] = useState<'overview' | 'manage-business' | 'schedule' | 'hiring'>('overview')
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(true)
   const [businessError, setBusinessError] = useState<string | null>(null)
 
-  // Load businesses on component mount and when user changes
+  // Load businesses on component mount and when me changes
   useEffect(() => {
-    if (user?.role === 'employer') {
+    if (me?.role === 'employer') {
       loadBusinesses()
     }
-  }, [user])
+  }, [me])
 
   const loadBusinesses = async () => {
     try {
@@ -211,7 +211,7 @@ export const EmployerDashboard: React.FC = () => {
           stats={{
             primary: { value: businesses.length, label: 'Businesses' },
             secondary: businesses.length > 0 ? { 
-              value: businesses.reduce((sum, b) => sum + b.employee_count, 0), 
+              value: businesses.length, // Number of businesses instead of employee count 
               label: 'Total Employees' 
             } : undefined
           }}
@@ -234,7 +234,7 @@ export const EmployerDashboard: React.FC = () => {
         <DashboardCard
           icon="💼"
           title="Job Posting and Hiring"
-          description="Post jobs, review applications, and hire qualified workers"
+          description="Post jobs, review applications, and hire qualified employees"
           onClick={() => setActiveSection('hiring')}
           isActive={activeSection === 'hiring'}
           stats={{
@@ -309,7 +309,7 @@ export const EmployerDashboard: React.FC = () => {
                   <span className="text-purple-600 text-sm">👥</span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">Worker hired</p>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Employee hired</p>
                   <p className="text-xs sm:text-sm text-gray-600">Warehouse Helper position • 3 days ago</p>
                 </div>
               </div>
@@ -345,7 +345,7 @@ export const EmployerDashboard: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               <span className="text-xs sm:text-sm text-gray-600 hidden sm:block">
-                Welcome, {user?.firstName || user?.email}
+                Welcome, {me?.email}
               </span>
               <button
                 onClick={signOut}

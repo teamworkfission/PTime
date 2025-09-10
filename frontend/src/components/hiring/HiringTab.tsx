@@ -11,7 +11,7 @@ export const HiringTab: React.FC<HiringTabProps> = ({ selectedBusinessId }) => {
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Job Posting and Hiring</h2>
         <p className="text-gray-600 mt-1">
-          Manage job postings, review applications, and hire workers for your business.
+          Manage job postings, review applications, and hire employees for your business.
         </p>
       </div>
 
@@ -65,15 +65,15 @@ export const HiringTab: React.FC<HiringTabProps> = ({ selectedBusinessId }) => {
               </button>
             </div>
 
-            {/* Hired Workers Card */}
+            {/* Hired Employees Card */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Hired This Month
               </h3>
               <div className="text-3xl font-bold text-green-600 mb-2">12</div>
-              <p className="text-gray-600 text-sm">Workers hired</p>
+              <p className="text-gray-600 text-sm">Employees hired</p>
               <button className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors">
-                View Workers
+                View Employees
               </button>
             </div>
           </div>
@@ -89,7 +89,7 @@ export const HiringTab: React.FC<HiringTabProps> = ({ selectedBusinessId }) => {
               </button>
               <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">
                 <div className="text-2xl mb-2">👥</div>
-                <div className="font-medium text-gray-900">Browse Workers</div>
+                <div className="font-medium text-gray-900">Browse Employees</div>
                 <div className="text-sm text-gray-600">Find qualified candidates</div>
               </button>
               <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center">

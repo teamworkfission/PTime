@@ -1,38 +1,27 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types/auth'
 import { Button } from '../common/Button'
 
-interface SignInFormProps {
+interface UnifiedAuthFormProps {
   role: UserRole
+  mode: 'signin' | 'signup'
   onSuccess: () => void
 }
 
-export const SignInForm: React.FC<SignInFormProps> = ({ role, onSuccess }) => {
-  const [error, setError] = useState('')
+export const UnifiedAuthForm: React.FC<UnifiedAuthFormProps> = ({ role, mode, onSuccess }) => {
   const [loading, setLoading] = useState(false)
-  
-  const { signInWithGoogle } = useAuth()
+  const { signInWithGoogle, signUpWithGoogle } = useAuth()
 
-  useEffect(() => {
-    const handleAuthError = (event: CustomEvent) => {
-      setError(event.detail.message)
-      setLoading(false)
-    }
-
-    window.addEventListener('auth-error', handleAuthError as EventListener)
-    return () => window.removeEventListener('auth-error', handleAuthError as EventListener)
-  }, [])
-
-  const handleGoogleSignIn = async () => {
-    setError('')
+  const handleGoogleAuth = async () => {
     setLoading(true)
 
     try {
-      const { error } = await signInWithGoogle({ role })
+      const authFunction = mode === 'signin' ? signInWithGoogle : signUpWithGoogle
+      const { error } = await authFunction({ role })
       
       if (error) {
-        setError(error.message)
+        // Error will be handled by AuthContext and surfaced in modal
         setLoading(false)
         return
       }
@@ -40,27 +29,28 @@ export const SignInForm: React.FC<SignInFormProps> = ({ role, onSuccess }) => {
       // Success - close modal (OAuth redirect will handle navigation)
       onSuccess()
     } catch (err) {
-      setError('An unexpected error occurred')
+      // Unexpected errors will be handled by AuthContext
       setLoading(false)
     }
   }
 
+  const actionText = mode === 'signin' ? 'Sign In' : 'Create Account'
+  const loadingText = mode === 'signin' ? 'Signing In...' : 'Creating Account...'
+  const roleText = role === 'employee' ? 'employee' : 'employer'
+
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-      
+    <div className="space-y-4">      
       <div className="text-center">
         <p className="text-sm text-gray-600 mb-4">
-          Sign in to your {role === 'worker' ? 'worker' : 'employer'} account using Google
+          {mode === 'signin' 
+            ? `Sign in to your ${roleText} account using Google`
+            : `Create your ${roleText} account using Google`
+          }
         </p>
       </div>
 
       <Button
-        onClick={handleGoogleSignIn}
+        onClick={handleGoogleAuth}
         className="w-full flex items-center justify-center space-x-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
         disabled={loading}
       >
@@ -71,18 +61,18 @@ export const SignInForm: React.FC<SignInFormProps> = ({ role, onSuccess }) => {
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
         <span>
-          {loading ? 'Signing In...' : 'Continue with Google'}
+          {loading ? loadingText : `${actionText} with Google`}
         </span>
       </Button>
 
-      <div className="text-center">
-        <p className="text-xs text-gray-500">
-          {role === 'worker' ? 
-            "Don't have a worker account? Click Sign Up above." :
-            "Don't have an employer account? Click Sign Up above."
-          }
+      {mode === 'signup' && (
+        <p className="text-xs text-gray-600 text-center">
+          By signing up, you agree to our{' '}
+          <a href="#" className="text-primary-600 hover:text-primary-700">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-primary-600 hover:text-primary-700">Privacy Policy</a>
         </p>
-      </div>
+      )}
     </div>
   )
 }

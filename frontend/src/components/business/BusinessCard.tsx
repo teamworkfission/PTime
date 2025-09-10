@@ -1,6 +1,5 @@
 import React from 'react';
 import { Business } from '../../types/business';
-import { Button } from '../common/Button';
 
 interface BusinessCardProps {
   business: Business;
@@ -65,13 +64,13 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="text-2xl" role="img" aria-label="Business type">
-              {getBusinessIcon(business.business_type)}
+              {getBusinessIcon(business.type)}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {business.business_name}
+                {business.name}
               </h3>
-              <p className="text-sm text-gray-600">{business.business_type}</p>
+              <p className="text-sm text-gray-600">{business.type}</p>
             </div>
           </div>
           {isSelected && (
@@ -86,13 +85,13 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
         {/* Location */}
         <div className="flex items-center text-sm text-gray-600 mb-3">
           <span className="mr-2">📍</span>
-          <span className="truncate">{business.business_location}</span>
+          <span className="truncate">{business.address_city}, {business.address_state}</span>
         </div>
 
         {/* Employee Count */}
         <div className="flex items-center text-sm text-gray-600 mb-4">
           <span className="mr-2">👥</span>
-          <span>{formatEmployeeCount(business.employee_count)}</span>
+          <span>{formatEmployeeCount(0)}</span>
         </div>
 
         {/* Footer */}

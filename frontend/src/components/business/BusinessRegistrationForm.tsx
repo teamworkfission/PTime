@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreateBusinessDto, BUSINESS_TYPES, BusinessType } from '../../types/business';
+import { CreateBusinessDto, BUSINESS_TYPES } from '../../types/business';
 import { Button } from '../common/Button';
 import { AddressLookup } from '../common/AddressLookup';
 import { ParsedAddress } from '../../types/google-maps';

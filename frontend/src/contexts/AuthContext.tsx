@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, TABLES } from '../lib/supabase'
-import { AuthState, User, UserRole, GoogleAuthData } from '../types/auth'
+import { User, UserRole, GoogleAuthData } from '../types/auth'
 
-interface AuthContextType extends AuthState {
+type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated'
+
+interface AuthContextType {
+  status: AuthStatus
+  me: User | null
   signUpWithGoogle: (data: GoogleAuthData) => Promise<{ error: Error | null }>
   signInWithGoogle: (data: GoogleAuthData) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
-  setUserRole: (role: UserRole) => void
-  pendingRole: UserRole | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -25,17 +27,24 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [pendingRole, setPendingRole] = useState<UserRole | null>(null)
+  const [me, setMe] = useState<User | null>(null)
+  const [status, setStatus] = useState<AuthStatus>('initializing')
+  const [pendingAuthData, setPendingAuthData] = useState<GoogleAuthData | null>(null)
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        fetchUserProfile(session.user.id)
+        // If we have pending auth data, validate against it
+        if (pendingAuthData) {
+          handleAuthCompletion(session.user, pendingAuthData)
+          setPendingAuthData(null)
+        } else {
+          // No pending data - just fetch profile for existing authenticated users
+          fetchUserProfile(session.user.id)
+        }
       } else {
-        setLoading(false)
+        setStatus('unauthenticated')
       }
     })
 
@@ -43,107 +52,129 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          // Get auth intent from localStorage
-          const authIntent = localStorage.getItem('auth_intent')
-          const authRole = localStorage.getItem('auth_role') as UserRole
-          
-          // Check if profile exists
-          const { data: existingProfile, error: profileError } = await supabase
-            .from(TABLES.USER_PROFILES)
-            .select('*')
-            .eq('email', session.user.email!)
-            .maybeSingle() // Use maybeSingle to handle 0 rows gracefully
-
-          // Handle profile lookup errors
-          if (profileError) {
-            console.error('Error checking existing profile:', profileError)
-            localStorage.removeItem('auth_intent')
-            localStorage.removeItem('auth_role')
-            await supabase.auth.signOut()
-            setUser(null)
-            setPendingRole(null)
-            setLoading(false)
-            window.dispatchEvent(new CustomEvent('auth-error', { 
-              detail: { message: `Profile lookup failed: ${profileError.message}` }
-            }))
-            return
+          // Handle auth completion based on pending auth data
+          if (pendingAuthData) {
+            await handleAuthCompletion(session.user, pendingAuthData)
+            setPendingAuthData(null)
+          } else {
+            // Direct login without pending data
+            await fetchUserProfile(session.user.id)
           }
-
-          if (authIntent === 'signup') {
-            // User trying to sign up
-            if (existingProfile) {
-              // User already exists - show error and sign out
-              localStorage.removeItem('auth_intent')
-              localStorage.removeItem('auth_role')
-              await supabase.auth.signOut()
-              setUser(null)
-              setPendingRole(null)
-              setLoading(false)
-              // This error will be handled by the forms
-              window.dispatchEvent(new CustomEvent('auth-error', { 
-                detail: { message: 'User already exists. Please use sign in instead.' }
-              }))
-              return
-            } else {
-              // New user - create profile
-              const { error: insertError } = await supabase
-                .from(TABLES.USER_PROFILES)
-                .insert([
-                  {
-                    id: session.user.id,
-                    email: session.user.email!,
-                    user_type: authRole,
-                  },
-                ])
-
-              if (insertError) {
-                console.error('Error creating user profile:', insertError)
-                localStorage.removeItem('auth_intent')
-                localStorage.removeItem('auth_role')
-                await supabase.auth.signOut()
-                setUser(null)
-                setPendingRole(null)
-                setLoading(false)
-                // Dispatch error event for better user feedback
-                window.dispatchEvent(new CustomEvent('auth-error', { 
-                  detail: { message: `Failed to create profile: ${insertError.message}` }
-                }))
-                return
-              }
-            }
-          } else if (authIntent === 'signin') {
-            // User trying to sign in
-            if (!existingProfile) {
-              // User doesn't exist - show error and sign out
-              localStorage.removeItem('auth_intent')
-              localStorage.removeItem('auth_role')
-              await supabase.auth.signOut()
-              setUser(null)
-              setPendingRole(null)
-              setLoading(false)
-              // This error will be handled by the forms
-              window.dispatchEvent(new CustomEvent('auth-error', { 
-                detail: { message: 'Account was not found. Please sign up first.' }
-              }))
-              return
-            }
-          }
-
-          // Clear auth intent after processing
-          localStorage.removeItem('auth_intent')
-          localStorage.removeItem('auth_role')
-          
-          await fetchUserProfile(session.user.id)
         } else if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setPendingRole(null)
+          setMe(null)
+          setStatus('unauthenticated')
         }
-        setLoading(false)
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [pendingRole])
+  }, [pendingAuthData])
+
+  const handleAuthCompletion = async (authUser: any, authData: GoogleAuthData) => {
+    try {
+      // Check if profile exists
+      const { data: existingProfile, error: profileError } = await supabase
+        .from(TABLES.USER_PROFILES)
+        .select('*')
+        .eq('email', authUser.email!)
+        .maybeSingle()
+
+      if (profileError) {
+        console.error('Error checking existing profile:', profileError)
+        await supabase.auth.signOut()
+        setStatus('unauthenticated')
+        window.dispatchEvent(new CustomEvent('auth-error', { 
+          detail: { message: `Profile lookup failed: ${profileError.message}` }
+        }))
+        return
+      }
+
+      // Handle signup mode
+      if (authData.mode === 'signup') {
+        if (existingProfile) {
+          // User already exists - error
+          await supabase.auth.signOut()
+          setStatus('unauthenticated')
+          window.dispatchEvent(new CustomEvent('auth-error', { 
+            detail: { message: 'already_registered' }
+          }))
+          return
+        } else {
+          // Create new profile
+          const { error: insertError } = await supabase
+            .from(TABLES.USER_PROFILES)
+            .insert([{
+              id: authUser.id,
+              email: authUser.email!,
+              user_type: authData.role,
+            }])
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError)
+            await supabase.auth.signOut()
+            setStatus('unauthenticated')
+            window.dispatchEvent(new CustomEvent('auth-error', { 
+              detail: { message: `Failed to create profile: ${insertError.message}` }
+            }))
+            return
+          }
+
+          // For employees, also create entry in employees table
+          if (authData.role === 'employee') {
+            const { error: employeeError } = await supabase
+              .from('employees')
+              .insert([{
+                user_id: authUser.id,
+                full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Employee',
+                email: authUser.email!,
+              }])
+
+            if (employeeError) {
+              console.error('Error creating employee record:', employeeError)
+              // Don't fail the entire signup, but log the error
+              // The user can still function with just the user_profiles record
+            }
+          }
+        }
+      } 
+      // Handle signin mode
+      else if (authData.mode === 'signin') {
+        if (!existingProfile) {
+          // User doesn't exist - error
+          await supabase.auth.signOut()
+          setStatus('unauthenticated')
+          window.dispatchEvent(new CustomEvent('auth-error', { 
+            detail: { message: 'no_account' }
+          }))
+          return
+        } else if (existingProfile.user_type !== authData.role) {
+          // Role mismatch - show specific error message
+          await supabase.auth.signOut()
+          setStatus('unauthenticated')
+          const correctRole = existingProfile.user_type
+          const attemptedRole = authData.role
+          window.dispatchEvent(new CustomEvent('auth-error', { 
+            detail: { 
+              message: `role_mismatch_${attemptedRole}_is_${correctRole}`,
+              correctRole,
+              attemptedRole
+            }
+          }))
+          return
+        }
+      }
+
+      // If we get here, auth was successful - fetch profile
+      await fetchUserProfile(authUser.id)
+    } catch (error) {
+      console.error('Error in auth completion:', error)
+      await supabase.auth.signOut()
+      setStatus('unauthenticated')
+      window.dispatchEvent(new CustomEvent('auth-error', { 
+        detail: { message: 'Authentication failed' }
+      }))
+    }
+  }
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -151,95 +182,84 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .from(TABLES.USER_PROFILES)
         .select('*')
         .eq('id', userId)
-        .maybeSingle() // Use maybeSingle to handle 0 rows gracefully
+        .maybeSingle()
 
       if (error) {
         console.error('Error fetching user profile:', error)
-        // On errors, sign out to prevent auth state inconsistency
         await supabase.auth.signOut()
-        setUser(null)
-        setPendingRole(null)
+        setStatus('unauthenticated')
         return
       }
 
       if (data) {
-        setUser({
+        setMe({
           id: data.id,
           email: data.email,
           role: data.user_type as UserRole,
           createdAt: data.created_at,
         })
+        setStatus('authenticated')
       } else {
-        // No profile found for authenticated user
-        console.warn('User profile not found, user may need to complete registration')
+        console.warn('User profile not found')
         await supabase.auth.signOut()
-        setUser(null)
-        setPendingRole(null)
+        setStatus('unauthenticated')
       }
     } catch (error) {
       console.error('Unexpected error fetching user profile:', error)
-      // On unexpected errors, sign out to prevent auth state inconsistency
       await supabase.auth.signOut()
-      setUser(null)
-      setPendingRole(null)
+      setStatus('unauthenticated')
     }
   }
 
   const signUpWithGoogle = async (googleAuthData: GoogleAuthData) => {
     try {
-      setLoading(true)
-      setPendingRole(googleAuthData.role)
+      setPendingAuthData({ ...googleAuthData, mode: 'signup' })
       
-      // Store signup intent in localStorage to validate after OAuth callback
-      localStorage.setItem('auth_intent', 'signup')
-      localStorage.setItem('auth_role', googleAuthData.role)
-      
-      // Start Google OAuth flow
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:3000'
+          redirectTo: 'http://localhost:5173',
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       })
 
       if (error) {
+        setPendingAuthData(null)
         return { error }
       }
 
       return { error: null }
     } catch (error) {
+      setPendingAuthData(null)
       return { error: error as Error }
-    } finally {
-      setLoading(false)
     }
   }
 
   const signInWithGoogle = async (googleAuthData: GoogleAuthData) => {
     try {
-      setLoading(true)
-      setPendingRole(googleAuthData.role)
+      setPendingAuthData({ ...googleAuthData, mode: 'signin' })
       
-      // Store signin intent in localStorage to validate after OAuth callback
-      localStorage.setItem('auth_intent', 'signin')
-      localStorage.setItem('auth_role', googleAuthData.role)
-      
-      // Start Google OAuth flow
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:3000'
+          redirectTo: 'http://localhost:5173',
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       })
 
       if (error) {
+        setPendingAuthData(null)
         return { error }
       }
 
       return { error: null }
     } catch (error) {
+      setPendingAuthData(null)
       return { error: error as Error }
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -248,23 +268,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (error) {
       console.error('Error signing out:', error)
     }
-    setUser(null)
-    setPendingRole(null)
-  }
-
-  const setUserRole = (role: UserRole) => {
-    setPendingRole(role)
+    setMe(null)
+    setStatus('unauthenticated')
   }
 
   const value: AuthContextType = {
-    user,
-    loading,
-    isAuthenticated: !!user,
+    status,
+    me,
     signUpWithGoogle,
     signInWithGoogle,
     signOut,
-    setUserRole,
-    pendingRole,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

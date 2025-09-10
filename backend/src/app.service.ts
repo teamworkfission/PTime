@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 export class AppService {
   getHello(): { message: string; timestamp: string; version: string } {
     return {
-      message: 'PTime API - Gig Worker Platform',
+      message: 'PTime API - Employee Gig Platform',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
     };
